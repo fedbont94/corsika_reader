@@ -1,0 +1,12 @@
+executable = /home/fbontempo/getMuonsFromCorsika/readCorsikaOutput.sh
+arguments = ""
+
+log = /home/fbontempo/getMuonsFromCorsika/logs/$(Cluster).$(Process).log
+output = /home/fbontempo/getMuonsFromCorsika/logs/$(Cluster).$(Process).out
+error = /home/fbontempo/getMuonsFromCorsika/logs/$(Cluster).$(Process).err
+
+request_cpus = 1
+request_memory = 3GB
+request_disk = 3GB
+#request_gpus = 1
+queue 1
