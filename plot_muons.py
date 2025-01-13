@@ -49,6 +49,32 @@ def get_fraction_of_muons(data, args):
     return fraction
 
 
+def get_events_with_InInceSignal(data, args):
+    fraction = {}
+    energies = list(data.keys())
+    for energy in energies:
+        # Radius cut
+        x = data[energy]["x"]
+        y = data[energy]["y"]
+        radius = ((x) ** 2 + (y) ** 2) ** 0.5
+        radius_cut = radius < 500
+        # Get the zenith angle cut. below 38 degrees
+        zenith_cut = data[energy]["zenith"] < np.deg2rad(float(args.zenith_cut))
+        # Get the inice containment
+        containment = data[energy]["MCPrimary_inice_FractionContainment"]
+        containment_cut = (containment <= 1.0) & (containment >= 0.0)
+
+        print(containment)
+        ev = np.ones(data[energy]["zenith"].shape[0])
+
+        fraction[energy] = (
+            np.sum(ev[zenith_cut & radius_cut & containment_cut])
+            / ev[zenith_cut & radius_cut]
+        )
+
+    return fraction
+
+
 def plot_data(fractionOfMuons, args):
     print("Plotting data")
     plt.figure(figsize=(10, 7))
@@ -83,7 +109,7 @@ def plot_data(fractionOfMuons, args):
     for primary in fractionOfMuons.keys():
         ax1.plot(
             fractionOfMuons[primary].keys(),
-            fractionOfMuons[primary].values(),
+            1.0 - (np.array(list(fractionOfMuons[primary].values()))),
             "o-",
             label=primary,
             linewidth=2,
@@ -93,6 +119,7 @@ def plot_data(fractionOfMuons, args):
 
     ax1.set_xlabel("log$_{10}$(Energy/GeV)")
     ax1.set_ylabel("Fraction of events", color="k")
+    ax1.set_yscale("log")
     ax1.tick_params(axis="y", labelcolor="k")
     ax1.legend(loc="lower right")  # (loc="lower left")  #
     ax1.grid()
@@ -131,6 +158,80 @@ def plot_data(fractionOfMuons, args):
     plt.close()
 
 
+def plot_eventsInIce(fractionOfEvents, args):
+    print("Plotting data with InIce signal")
+    plt.figure(figsize=(10, 7))
+    plt.rcParams.update({"font.size": 16})
+    colors = {
+        "proton": "red",
+        "gamma": "purple",
+    }
+
+    # Make sure they have the same energies. Otherwise ratio will be wrong
+    gamma_energies = set(fractionOfEvents["gamma"].keys())
+    proton_energies = set(fractionOfEvents["proton"].keys())
+    energies = gamma_energies.intersection(proton_energies)
+
+    ratio_gamma = []
+    ratio_proton = []
+
+    # Must sort the energies
+    for energy in sorted(energies):
+        proton_value = fractionOfEvents["proton"].get(energy)
+        gamma_value = fractionOfEvents["gamma"].get(energy)
+        print(energy, proton_value, gamma_value)
+
+        ratio_gamma.append(gamma_value)
+        ratio_proton.append(proton_value)
+
+    fig, ax1 = plt.subplots(figsize=(10, 7))
+
+    ax1.plot(
+        fractionOfEvents["gamma"].keys(),
+        ratio_gamma,
+        "o-",
+        label="Gamma",
+        linewidth=2,
+        markersize=5,
+        color=colors["gamma"],
+    )
+    ax1.plot(
+        fractionOfEvents["proton"].keys(),
+        ratio_proton,
+        "o-",
+        label="Proton",
+        linewidth=2,
+        markersize=5,
+        color=colors["proton"],
+    )
+
+    ax1.set_xlabel("log$_{10}$(Energy/GeV)")
+    ax1.set_ylabel("Fraction of events", color="k")
+    ax1.tick_params(axis="y", labelcolor="k")
+    ax1.legend(loc="lower right")  # (loc="lower left")  #
+
+    ax1.grid()
+    # Add the IceCube preliminary label
+    ax1.text(
+        0.01,
+        0.99,
+        "IceCube Preliminary",
+        c="r",
+        transform=ax1.transAxes,
+        fontsize=16,
+        verticalalignment="top",
+    )
+    plt.title(
+        f"Fraction of events with InIce signal \n$\\theta$<{args.zenith_cut}$^\circ$"
+    )
+
+    plt.savefig(
+        f"{args.outputDir}/proton_gamma_ratio_InIce_{args.year}.png",
+        bbox_inches="tight",
+    )
+    plt.close()
+
+
 def main(args):
     data_paths = {
         "gamma": "/data/user/fbontempo/corsikaMuons/gamma/22334/",
@@ -146,6 +247,15 @@ def main(args):
     }
 
     plot_data(fractionOfMuons=fractionOfMuons, args=args)
+
+    # fractionOfEvents = {
+    #     "gamma": get_events_with_InInceSignal(data=gamma, args=args),
+    #     "proton": get_events_with_InInceSignal(data=proton, args=args),
+    # }
+
+    # print(fractionOfEvents)
+
+    # plot_eventsInIce(fractionOfEvents=fractionOfEvents, args=args)
 
 
 if __name__ == "__main__":

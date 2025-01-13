@@ -145,6 +145,7 @@ def calculate_containment(
 
     tree = frame["I3MCTree"]
     primary = frame["I3MCTree"].get_primary(tree.get_primaries()[0])
+    print(primary)
 
     frame.Put(
         particle + "_FractionContainment",
